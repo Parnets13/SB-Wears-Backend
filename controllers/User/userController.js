@@ -13,6 +13,7 @@ const jwt = require("jsonwebtoken");
 const HARD_CODED_OTP = "1234";
 require("dotenv").config();
 const multer = require("multer");
+const { default: mongoose } = require("mongoose");
 // const cors = require("cors");
 // app.use(cors());
 // app.use(express.json());
@@ -185,6 +186,35 @@ const getAllProductsFromAllCategories = async (req, res) => {
   }
 };
 
+const getProductByID = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Make sure the ID exists and is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(String(id))) {
+      return res.status(400).json({ error: "Invalid ObjectId" });
+    }
+
+    const product = await categoryProduct.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    return res.status(200).json({
+      message: "Product fetched successfully",
+      product,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error fetching product", message: error.message });
+  }
+};
+
+
+
+
 const deleteProduct = async (req, res) => {
   const { id } = req.params;
   try {
@@ -226,7 +256,7 @@ const getOccasionWithCategoriesAndProducts = async (req, res) => {
 };
  
 const AddToCart = async (req , res)=> {
-  const {userId, productId, size , productType, quantity = 1} = req.body
+  const {userId, productId, size , quantity = 1} = req.body
   // console.log(userId, productId, size , productType)
   try {
     const user = await User.findById(userId);
@@ -237,7 +267,7 @@ const AddToCart = async (req , res)=> {
 
     // Check if product already exists in the cart
     const existingProduct = user.cart.find(
-      (item) => item.productId.toString() === productId.toString() && item.productType === productType
+      (item) => item.productId.toString() === productId.toString() 
       && item.size === size
     );
 
@@ -249,7 +279,6 @@ const AddToCart = async (req , res)=> {
       user.cart.push({
         productId,
         size,
-        productType,
         quantity,
         addedAt: Date.now(),
       });
@@ -258,8 +287,8 @@ const AddToCart = async (req , res)=> {
     await user.save();
     return res.status(200).json(user.cart); // Return updated cart
   } catch (error) {
-    console.error("Error adding to cart:", error);
-    throw new Error("Error adding product to cart");
+    console.error( error.message);
+    // throw new Error("Error adding product to cart");
   }
 }
   
@@ -313,7 +342,7 @@ module.exports =
   getOccasionWithCategoriesAndProducts , 
   getAllProductsFromAllCategories, 
   deleteProduct,
-  AddToCart,RemoveFromCart
+  AddToCart,RemoveFromCart,getProductByID
 };
 
 

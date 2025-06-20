@@ -243,13 +243,9 @@ const userSchema = new mongoose.Schema({
       productId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        refPath: 'cart.productType',  // Dynamically reference either OccasionProduct or CategoryProduct
+        refPath: 'CategoryProduct',  // Dynamically reference either OccasionProduct or CategoryProduct
       },
-      productType: {
-        type: String,
-        required: true,
-        enum: ['OccasionProduct', 'CategoryProduct'], // Define allowed types
-      },
+    
       quantity: {
         type: Number,
         // required: true,
