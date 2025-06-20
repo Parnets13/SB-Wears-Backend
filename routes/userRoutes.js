@@ -8,6 +8,7 @@ const {
     getAllProductsFromAllCategories, 
     AddToCart,
     RemoveFromCart,
+    deleteProduct,
   } = require("../controllers/User/userController"); 
 
 const { 
@@ -35,7 +36,8 @@ const {
      addOrUpdateOccCategory,
      deleteOccCategory,
      deleteProCategory,
-     addOrUpdateProCategory
+     addOrUpdateProCategory,
+     getProCategoryById
   }
    = require("../controllers/Admin/adminController"); 
 
@@ -66,8 +68,16 @@ router.post("/occasion/category", upload.any(), addOrUpdateOccCategory);
 router.get("/occasion/category", getOccCategory);
 router.delete("/occasion/category/:OccCategoryId", deleteOccCategory);
 
+// router.post("/product/category", upload.any(), addOrUpdateProCategory);
+// router.get("/product/category", getProCategory);
+// router.get("/product/category/single/:id", getProCategoryById);
+// router.delete("/product/category/:ProCategoryId", deleteProCategory);
+
+// routes/category.js
 router.post("/product/category", upload.any(), addOrUpdateProCategory);
+router.post("/product/category/:id", upload.any(), addOrUpdateProCategory); // Update endpoint
 router.get("/product/category", getProCategory);
+router.get("/product/category/single/:id", getProCategoryById);
 router.delete("/product/category/:ProCategoryId", deleteProCategory);
 
 router.post("/productManagement/size", addSize);
@@ -88,6 +98,7 @@ router.get("/occasion/product", getAllProductsFromAllOccasionCategories);
 router.post("/category/product", upload.any(), addOrUpdateProductInCategory); 
 // router.put("/category/product/:productId", addOrUpdateProductInCategory); 
 router.get("/category/product", getAllProductsFromAllCategories); 
+router.delete("/category/product/:id", deleteProduct);
 
 router.post("/update/occasion/stock" , updateOccasionStock)
 router.post("/update/category/stock" , updateCategoryStock) 
