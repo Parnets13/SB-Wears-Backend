@@ -172,7 +172,7 @@ const getAllProductsFromAllOccasionCategories = async (req, res) => {
 const getAllProductsFromAllCategories = async (req, res) => {
   try {
     // Find all products from CategoryProduct model
-    const products = await categoryProduct.find();
+    const products = await categoryProduct.find()
 
     return res.status(200).json({
       message: products.length > 0 ? "All products fetched successfully" : "No products available",
@@ -185,6 +185,20 @@ const getAllProductsFromAllCategories = async (req, res) => {
   }
 };
 
+const deleteProduct = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const category = await categoryProduct.findById(id);
+    if (!category) {
+      return res.status(404).json({ error: "Product not found" });
+    } 
+    await categoryProduct.findByIdAndDelete(id); 
+    return res.status(200).json({ message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting Product:", error);
+    return res.status(500).json({ error: "Error deleting Product" });
+  }
+};
 
 const getOccasionWithCategoriesAndProducts = async (req, res) => {
   try {
@@ -298,6 +312,7 @@ module.exports =
   getAllProductsFromAllOccasionCategories,
   getOccasionWithCategoriesAndProducts , 
   getAllProductsFromAllCategories, 
+  deleteProduct,
   AddToCart,RemoveFromCart
 };
 

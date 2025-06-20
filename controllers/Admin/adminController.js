@@ -494,17 +494,41 @@ const addOrUpdateProCategory = async (req, res) => {
         return res.status(404).json({ error: "Product Category not found" });
       }
 
-      // Update only provided fields
-      if (Category) existingCategory.Category = Category;
-      if (Description) existingCategory.Description = Description;
-      if (req.files.length > 0) existingCategory.image = req.files[0].filename;
+      // Create an object to track changes
+      const updateFields = {};
+      let hasChanges = false;
 
-      await existingCategory.save();
+      // Check and update each field if provided
+      if (Category !== undefined) {
+        updateFields.Category = Category;
+        hasChanges = true;
+      }
+      if (Description !== undefined) {
+        updateFields.Description = Description;
+        hasChanges = true;
+      }
+      if (req.files?.length > 0) {
+        updateFields.image = req.files[0].filename;
+        hasChanges = true;
+      }
+
+      if (!hasChanges) {
+        return res.status(400).json({ error: "No fields provided for update" });
+      }
+
+      // Update the category
+      const updatedCategory = await ProCategory.findByIdAndUpdate(
+        CategoryId,
+        updateFields,
+        { new: true, runValidators: true }
+      );
+
       return res.status(200).json({
         message: "Product Category updated successfully",
-        ProductCategory: existingCategory,
+        ProductCategory: updatedCategory,
       });
-    } else {
+    }
+    else {
       // Validation for adding a new category
       if (req.files.length === 0 || !Category || !Description) {
         return res.status(400).json({ error: "All fields are required for adding a new category" });
@@ -536,6 +560,17 @@ const getProCategory = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Error fetching Product Categories" });
+  }
+};
+
+const getProCategoryById = async (req, res) => {
+  console.log("req params : " , req.params.id)
+  try {
+    const ProductCategories = await ProCategory.findById(req.params.id)
+    return res.status(200).json(ProductCategories);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Error fetching Product Category" });
   }
 };
 
@@ -879,15 +914,128 @@ const addOrUpdateOccasionProduct = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Error processing request", error: error.message });
   }
-};
+};  
+// const addOrUpdateProductInCategory = async (req, res) => {
+//   const {
+//     name,
+//     mrp, 
+//     discount, 
+//     category, 
+//     tag,
+//     color,
+//     fabric,
+//     size,
+//     status,
+//     sizeChart,
+//     description,
+//     additionalInfo,
+//     stocks,
+//     Minstocks,
+//     productCategoryId,
+//   } = req.body;
 
+//   let offerPrice = mrp;
+//   if (discount && discount > 0) {
+//     offerPrice = mrp - mrp * (discount / 100);
+//   }
+//   const { productId } = req.query;
+//   try {
+//     if (productId) {
+//       // **UPDATE PRODUCT LOGIC**
+//       const existingProduct = await categoryProduct.findById(productId);
+//       if (!existingProduct) {
+//         return res.status(404).json({ error: "Product not found" });
+//       }
+
+//       // Update the product with the new values (only provided fields will be updated)
+//       const updatedProduct = await categoryProduct.findByIdAndUpdate(
+//         productId,
+//         {
+//           name,
+//           mrp,
+//           discount,
+//           offerPrice,
+//           category,
+//           images,
+//           tag,
+//           color,
+//           status,
+//           fabric,
+//           size,
+//           sizeChart,
+//           description,
+//           additionalInfo,
+//           stocks,
+//         },
+//         { new: true } // Return updated product
+//       );
+
+//       return res.status(200).json({
+//         message: "Product updated successfully",
+//         Product: updatedProduct,
+//       });
+//     } else {
+//       // **ADD NEW PRODUCT LOGIC**
+//       if (
+//         !name ||
+//         !mrp ||
+//         !category ||
+//         req.files.length === 0 ||
+//         !stocks ||
+//         !productCategoryId
+//       ) {
+//         return res
+//           .status(400)
+//           .json({ error: "All required fields must be filled" });
+//       }
+
+//       const productCategory = await ProCategory.findById(productCategoryId);
+//       if (!productCategory) {
+//         return res.status(404).json({ error: "Product Category not found" });
+//       }
+
+//       const newProduct = new categoryProduct({
+//         name,
+//         mrp,
+//         discount,
+//         offerPrice,
+//         category,
+//         images : [req.files[1].filename , req.files[2].filename , req.files[3].filename , req.files[4].filename],
+//         tag,
+//         color : color.split(","),
+//         status,
+//         fabric,
+//         size : size.split(","),
+//         sizeChart : req.files[0].filename,
+//         description,
+//         Minstocks,
+//         additionalInfo,
+//         stocks,
+//         productCategory: productCategoryId,
+//       });
+
+//       await newProduct.save();
+
+//       productCategory.products.push(newProduct._id);
+//       await productCategory.save();
+
+//       return res.status(201).json({
+//         message: "Product added successfully",
+//         Product: newProduct,
+//       });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: "Error processing product request" });
+//   }
+// };
 
 const addOrUpdateProductInCategory = async (req, res) => {
   const {
     name,
-    mrp, 
-    discount, 
-    category, 
+    mrp,
+    discount,
+    category,
     tag,
     color,
     fabric,
@@ -901,40 +1049,45 @@ const addOrUpdateProductInCategory = async (req, res) => {
     productCategoryId,
   } = req.body;
 
+  const { productId } = req.query;
+
   let offerPrice = mrp;
   if (discount && discount > 0) {
     offerPrice = mrp - mrp * (discount / 100);
   }
-  const { productId } = req.query;
+  
   try {
+    const Booleanstatus = status === "active" ? true : false
     if (productId) {
-      // **UPDATE PRODUCT LOGIC**
       const existingProduct = await categoryProduct.findById(productId);
       if (!existingProduct) {
         return res.status(404).json({ error: "Product not found" });
       }
+      const updatedFields = {};
+      if (name !== undefined) updatedFields.name = name;
+      if (mrp !== undefined) updatedFields.mrp = mrp;
+      if (discount !== undefined) updatedFields.discount = discount;
+      if (offerPrice !== undefined) updatedFields.offerPrice = offerPrice;
+      if (category !== undefined) updatedFields.category = category;
+      if (tag !== undefined) updatedFields.tag = tag;
+      if (color !== undefined) updatedFields.color = color.split(",");
+      if (fabric !== undefined) updatedFields.fabric = fabric;
+      if (size !== undefined) updatedFields.size = size.split(",");
+      if (status !== undefined) updatedFields.status = Booleanstatus
+      if (description !== undefined) updatedFields.description = description;
+      if (additionalInfo !== undefined) updatedFields.additionalInfo = additionalInfo;
+      if (stocks !== undefined) updatedFields.stocks = stocks;
+      if (Minstocks !== undefined) updatedFields.Minstocks = Minstocks;
 
-      // Update the product with the new values (only provided fields will be updated)
+      if (req.files && req.files.length > 0) {
+        updatedFields.sizeChart = req.files[0]?.filename;
+        updatedFields.images = req.files.slice(1).map((file) => file.filename);
+      }
+
       const updatedProduct = await categoryProduct.findByIdAndUpdate(
         productId,
-        {
-          name,
-          mrp,
-          discount,
-          offerPrice,
-          category,
-          images,
-          tag,
-          color,
-          status,
-          fabric,
-          size,
-          sizeChart,
-          description,
-          additionalInfo,
-          stocks,
-        },
-        { new: true } // Return updated product
+        updatedFields,
+        { new: true, runValidators: true }
       );
 
       return res.status(200).json({
@@ -942,18 +1095,9 @@ const addOrUpdateProductInCategory = async (req, res) => {
         Product: updatedProduct,
       });
     } else {
-      // **ADD NEW PRODUCT LOGIC**
-      if (
-        !name ||
-        !mrp ||
-        !category ||
-        req.files.length === 0 ||
-        !stocks ||
-        !productCategoryId
-      ) {
-        return res
-          .status(400)
-          .json({ error: "All required fields must be filled" });
+      if (!name || !mrp || !category || req.files.length < 1 || !stocks || !productCategoryId) {
+      // if (!name || !mrp || !category || req.files.length < 4 || !productCategoryId) {
+        return res.status(400).json({ error: "All required fields must be filled" });
       }
 
       const productCategory = await ProCategory.findById(productCategoryId);
@@ -967,13 +1111,13 @@ const addOrUpdateProductInCategory = async (req, res) => {
         discount,
         offerPrice,
         category,
-        images : [req.files[1].filename , req.files[2].filename , req.files[3].filename , req.files[4].filename],
+        images: req.files.slice(1).map((file) => file.filename),
         tag,
-        color : color.split(","),
-        status,
+        color: color.split(","),
+        status : Booleanstatus,
         fabric,
-        size : size.split(","),
-        sizeChart : req.files[0].filename,
+        size: size.split(","),
+        sizeChart: req.files[0].filename,
         description,
         Minstocks,
         additionalInfo,
@@ -982,7 +1126,6 @@ const addOrUpdateProductInCategory = async (req, res) => {
       });
 
       await newProduct.save();
-
       productCategory.products.push(newProduct._id);
       await productCategory.save();
 
@@ -992,7 +1135,7 @@ const addOrUpdateProductInCategory = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(error);
+    console.error("Product creation/update error:", error);
     return res.status(500).json({ error: "Error processing product request" });
   }
 };
@@ -1271,6 +1414,7 @@ module.exports = {
   addProCategory,
   addOrUpdateProCategory,
   getProCategory,
+  getProCategoryById,
   deleteProCategory,
   addSize,
   getSize,
