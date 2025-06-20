@@ -26,6 +26,7 @@ const getUser = async (req, res) => {
       .populate("cart.productId")
       .populate("wishlist.productId")
       .populate("recentlyViewed.productId");
+      
 
     if (!user) {
       return res.status(404).json({ message: "User Not Found" });

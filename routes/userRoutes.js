@@ -9,6 +9,7 @@ const {
     AddToCart,
     RemoveFromCart,
     deleteProduct,
+    getProductByID
   } = require("../controllers/User/userController"); 
 
 const { 
@@ -102,6 +103,7 @@ router.get("/occasion/product", getAllProductsFromAllOccasionCategories);
 router.post("/category/product", upload.any(), addOrUpdateProductInCategory); 
 // router.put("/category/product/:productId", addOrUpdateProductInCategory); 
 router.get("/category/product", getAllProductsFromAllCategories); 
+router.get("/category/product/:id", getProductByID); 
 router.delete("/category/product/:id", deleteProduct);
 
 router.post("/update/occasion/stock" , updateOccasionStock)
