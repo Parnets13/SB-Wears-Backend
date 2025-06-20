@@ -915,6 +915,7 @@ const addOrUpdateOccasionProduct = async (req, res) => {
     res.status(500).json({ message: "Error processing request", error: error.message });
   }
 };  
+
 // const addOrUpdateProductInCategory = async (req, res) => {
 //   const {
 //     name,
@@ -1030,6 +1031,116 @@ const addOrUpdateOccasionProduct = async (req, res) => {
 //   }
 // };
 
+// const addOrUpdateProductInCategory1 = async (req, res) => {
+//   const {
+//     name,
+//     mrp,
+//     discount,
+//     category,
+//     tag,
+//     color,
+//     fabric,
+//     size,
+//     status,
+//     sizeChart,
+//     description,
+//     additionalInfo,
+//     stocks,
+//     Minstocks,
+//     productCategoryId,
+//   } = req.body;
+
+//   const { productId } = req.query;
+
+//   let offerPrice = mrp;
+//   if (discount && discount > 0) {
+//     offerPrice = mrp - mrp * (discount / 100);
+//   }
+  
+//   try {
+//     const Booleanstatus = status === "active" ? true : false
+//     if (productId) {
+//       const existingProduct = await categoryProduct.findById(productId);
+//       if (!existingProduct) {
+//         return res.status(404).json({ error: "Product not found" });
+//       }
+//       const updatedFields = {};
+//       if (name !== undefined) updatedFields.name = name;
+//       if (mrp !== undefined) updatedFields.mrp = mrp;
+//       if (discount !== undefined) updatedFields.discount = discount;
+//       if (offerPrice !== undefined) updatedFields.offerPrice = offerPrice;
+//       if (category !== undefined) updatedFields.category = category;
+//       if (tag !== undefined) updatedFields.tag = tag;
+//       if (color !== undefined) updatedFields.color = color.split(",");
+//       if (fabric !== undefined) updatedFields.fabric = fabric;
+//       if (size !== undefined) updatedFields.size = size.split(",");
+//       if (status !== undefined) updatedFields.status = Booleanstatus
+//       if (description !== undefined) updatedFields.description = description;
+//       if (additionalInfo !== undefined) updatedFields.additionalInfo = additionalInfo;
+//       if (stocks !== undefined) updatedFields.stocks = stocks;
+//       if (Minstocks !== undefined) updatedFields.Minstocks = Minstocks;
+
+//       if (req.files && req.files.length > 0) {
+//         updatedFields.sizeChart = req.files[0]?.filename;
+//         updatedFields.images = req.files.slice(1).map((file) => file.filename);
+//       }
+
+//       const updatedProduct = await categoryProduct.findByIdAndUpdate(
+//         productId,
+//         updatedFields,
+//         { new: true, runValidators: true }
+//       );
+
+//       return res.status(200).json({
+//         message: "Product updated successfully",
+//         Product: updatedProduct,
+//       });
+//     } else {
+//       if (!name || !mrp || !category || req.files.length < 1 || !stocks || !productCategoryId) {
+//       // if (!name || !mrp || !category || req.files.length < 4 || !productCategoryId) {
+//         return res.status(400).json({ error: "All required fields must be filled" });
+//       }
+
+//       const productCategory = await ProCategory.findById(productCategoryId);
+//       if (!productCategory) {
+//         return res.status(404).json({ error: "Product Category not found" });
+//       }
+
+//       const newProduct = new categoryProduct({
+//         name,
+//         mrp,
+//         discount,
+//         offerPrice,
+//         category,
+//         images: req.files.slice(1).map((file) => file.filename),
+//         tag,
+//         color: color.split(","),
+//         status : Booleanstatus,
+//         fabric,
+//         size: size.split(","),
+//         sizeChart: req.files[0].filename,
+//         description,
+//         Minstocks,
+//         additionalInfo,
+//         stocks,
+//         productCategory: productCategoryId,
+//       });
+
+//       await newProduct.save();
+//       productCategory.products.push(newProduct._id);
+//       await productCategory.save();
+
+//       return res.status(201).json({
+//         message: "Product added successfully",
+//         Product: newProduct,
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Product creation/update error:", error);
+//     return res.status(500).json({ error: "Error processing product request" });
+//   }
+// };
+
 const addOrUpdateProductInCategory = async (req, res) => {
   const {
     name,
@@ -1039,9 +1150,8 @@ const addOrUpdateProductInCategory = async (req, res) => {
     tag,
     color,
     fabric,
-    size,
+    size, 
     status,
-    sizeChart,
     description,
     additionalInfo,
     stocks,
@@ -1057,31 +1167,75 @@ const addOrUpdateProductInCategory = async (req, res) => {
   }
   
   try {
-    const Booleanstatus = status === "active" ? true : false
+    const Booleanstatus = status === "active" ? true : false;
+    const sizesArray = size ? size.split(",") : [];
+    
+    // Initialize stockBySize array with default quantities
+    const initializeStockBySize = (sizes) => {
+      return sizes.map(size => ({
+        size,
+        quantity: 0,
+        minQuantity: Minstocks || 0
+      }));
+    };
+
     if (productId) {
+      // UPDATE EXISTING PRODUCT
       const existingProduct = await categoryProduct.findById(productId);
       if (!existingProduct) {
         return res.status(404).json({ error: "Product not found" });
       }
-      const updatedFields = {};
-      if (name !== undefined) updatedFields.name = name;
-      if (mrp !== undefined) updatedFields.mrp = mrp;
-      if (discount !== undefined) updatedFields.discount = discount;
-      if (offerPrice !== undefined) updatedFields.offerPrice = offerPrice;
-      if (category !== undefined) updatedFields.category = category;
-      if (tag !== undefined) updatedFields.tag = tag;
-      if (color !== undefined) updatedFields.color = color.split(",");
-      if (fabric !== undefined) updatedFields.fabric = fabric;
-      if (size !== undefined) updatedFields.size = size.split(",");
-      if (status !== undefined) updatedFields.status = Booleanstatus
-      if (description !== undefined) updatedFields.description = description;
-      if (additionalInfo !== undefined) updatedFields.additionalInfo = additionalInfo;
-      if (stocks !== undefined) updatedFields.stocks = stocks;
-      if (Minstocks !== undefined) updatedFields.Minstocks = Minstocks;
+      const parsedColors = color ? color.split(",").filter(Boolean) : existingProduct.color;
+      const parsedSizes = size ? size.split(",").filter(Boolean) : existingProduct.availableSizes;
+      const updatedFields = {
+        name: name || existingProduct.name,
+        mrp: mrp || existingProduct.mrp,
+        discount: discount || existingProduct.discount,
+        offerPrice: offerPrice || existingProduct.offerPrice,
+        category: category || existingProduct.category,
+        tag: tag || existingProduct.tag,
+        // color: color ? color.split(",") : existingProduct.color,
+        color: parsedColors,
+        fabric: fabric || existingProduct.fabric,
+        // availableSizes: sizesArray.length > 0 ? sizesArray : existingProduct.availableSizes,
+        availableSizes: parsedSizes,
+        description: description || existingProduct.description,
+        additionalInfo: additionalInfo || existingProduct.additionalInfo,
+        Minstocks: Minstocks || existingProduct.Minstocks,
+        status: Booleanstatus,
+        productCategory: productCategoryId || existingProduct.productCategory
+      };
 
+      // Handle stockBySize updates
+      // if (sizesArray.length > 0) {
+      //   // Keep existing stock data for sizes that are still available
+      //   updatedFields.stockBySize = existingProduct.stockBySize.filter(item => 
+      //     sizesArray.includes(item.size)
+      //     .map(item => ({
+      //       size: item.size,
+      //       quantity: item.quantity,
+      //       minQuantity: Minstocks || item.minQuantity
+      //     })))
+        
+      //   // Add new sizes with default quantity 0
+      //   sizesArray.forEach(size => {
+      //     if (!updatedFields.stockBySize.some(item => item.size === size)) {
+      //       updatedFields.stockBySize.push({
+      //         size,
+      //         quantity: 0,
+      //         minQuantity: Minstocks || 0
+      //       });
+      //     }
+      //   });
+      // }
+
+      // Handle file updates
       if (req.files && req.files.length > 0) {
-        updatedFields.sizeChart = req.files[0]?.filename;
-        updatedFields.images = req.files.slice(1).map((file) => file.filename);
+        updatedFields.sizeChart = req.files[0]?.filename || existingProduct.sizeChart;
+        // Keep existing images unless new ones are uploaded
+        updatedFields.images = req.files.length > 1 
+          ? req.files.slice(1).map(file => file.filename)
+          : existingProduct.images;
       }
 
       const updatedProduct = await categoryProduct.findByIdAndUpdate(
@@ -1095,9 +1249,21 @@ const addOrUpdateProductInCategory = async (req, res) => {
         Product: updatedProduct,
       });
     } else {
-      if (!name || !mrp || !category || req.files.length < 1 || !stocks || !productCategoryId) {
-      // if (!name || !mrp || !category || req.files.length < 4 || !productCategoryId) {
-        return res.status(400).json({ error: "All required fields must be filled" });
+      // CREATE NEW PRODUCT
+      const parsedColors = color ? color.split(",").filter(Boolean) : [];
+      const parsedSizes = size ? size.split(",").filter(Boolean) : [];
+      
+      if (!name || !mrp || !category || !productCategoryId || !size || parsedSizes.length === 0) {
+        console.log("req.body : " , req.body)
+        return res.status(400).json({ 
+          error: "Name, MRP, Category, Sizes and Category ID are required" 
+        });
+      }
+
+      if (req.files?.length < 1) {
+        return res.status(400).json({ 
+          error: "Please upload at least one product image and size chart" 
+        });
       }
 
       const productCategory = await ProCategory.findById(productCategoryId);
@@ -1111,18 +1277,20 @@ const addOrUpdateProductInCategory = async (req, res) => {
         discount,
         offerPrice,
         category,
-        images: req.files.slice(1).map((file) => file.filename),
-        tag,
-        color: color.split(","),
-        status : Booleanstatus,
-        fabric,
-        size: size.split(","),
+        images: req.files.slice(1).map(file => file.filename),
         sizeChart: req.files[0].filename,
+        tag,
+        // color: color ? color.split(",") : [],
+        availableSizes: parsedSizes,
+        color: parsedColors,
+        fabric,
+        // availableSizes: sizesArray,
+        stockBySize: initializeStockBySize(sizesArray),
         description,
-        Minstocks,
         additionalInfo,
-        stocks,
-        productCategory: productCategoryId,
+        Minstocks: Minstocks || 0,
+        status: Booleanstatus,
+        productCategory: productCategoryId
       });
 
       await newProduct.save();
@@ -1136,7 +1304,10 @@ const addOrUpdateProductInCategory = async (req, res) => {
     }
   } catch (error) {
     console.error("Product creation/update error:", error);
-    return res.status(500).json({ error: "Error processing product request" });
+    return res.status(500).json({ 
+      error: "Error processing product request",
+      details: error.message 
+    });
   }
 };
 
@@ -1278,6 +1449,136 @@ const updateCategoryStock = async (req, res) => {
   }
 };
 
+// Get all products with their stock information
+const getProductsWithStock = async (req, res) => {
+  try {
+    // Fetch products with basic stock information
+    const products = await categoryProduct.find({})
+      .select('name category availableSizes stockBySize status')
+      .lean();
+
+    // Calculate total stock for each product
+    const productsWithStock = products.map(product => {
+      const totalStock = product.stockBySize?.reduce(
+        (sum, size) => sum + size.quantity, 0
+      ) || 0;
+      
+      return {
+        ...product,
+        totalStock,
+        // Include only the sizes that have stock data
+        availableSizes: product.availableSizes?.filter(size => 
+          product.stockBySize?.some(s => s.size === size))
+      };
+    });
+
+    res.status(200).json({ products: productsWithStock });
+  } catch (error) {
+    console.error('Error fetching products with stock:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch products with stock information',
+      details: error.message
+    });
+  }
+};
+
+// Get product stock information
+const getProductStock = async (req, res) => {
+  try {
+    const product = await categoryProduct.findById(req.params.productId)
+      .select('name stockBySize availableSizes Minstocks');
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.status(200).json({
+      productName: product.name,
+      availableSizes: product.availableSizes,
+      stockBySize: product.stockBySize,
+      minStock: product.Minstocks
+    });
+  } catch (error) {
+    console.error('Error fetching product stock:', error);
+    res.status(500).json({ error: 'Failed to fetch product stock' });
+  }
+};
+
+// Update stock for a specific size
+const updateStock = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { size, stockName, addedStock } = req.body;
+
+    // Validation
+    if (!size || !stockName || !addedStock || isNaN(addedStock)) {
+      return res.status(400).json({ error: 'Size, stock name and valid quantity are required' });
+    }
+
+    const product = await categoryProduct.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Check if size exists in product
+    if (!product.availableSizes.includes(size)) {
+      return res.status(400).json({ error: 'Invalid size for this product' });
+    }
+
+    // Find or create stock entry for this size
+    let sizeStock = product.stockBySize.find(s => s.size === size);
+    const previousStock = sizeStock ? sizeStock.quantity : 0;
+    const newStock = previousStock + parseInt(addedStock);
+
+    if (!sizeStock) {
+      sizeStock = { size, quantity: newStock, minQuantity: product.Minstocks };
+      product.stockBySize.push(sizeStock);
+    } else {
+      sizeStock.quantity = newStock;
+    }
+
+    // Add to stock history
+    product.stockHistory.push({
+      size,
+      stockName,
+      addedStock: parseInt(addedStock),
+      previousStock
+    });
+
+    await product.save();
+
+    res.status(200).json({
+      message: 'Stock updated successfully',
+      stock: {
+        size,
+        currentStock: newStock,
+        minStock: product.Minstocks
+      }
+    });
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    res.status(500).json({ error: 'Failed to update stock' });
+  }
+};
+
+// Get stock history for a product
+const getStockHistory = async (req, res) => {
+  try {
+    const product = await categoryProduct.findById(req.params.productId)
+      .select('stockHistory')
+      .sort({ 'stockHistory.addedAt': -1 });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.status(200).json(product.stockHistory);
+  } catch (error) {
+    console.error('Error fetching stock history:', error);
+    res.status(500).json({ error: 'Failed to fetch stock history' });
+  }
+};
+
 // const AbandonedCart = async (req, res) => {
 //   const { userId } = req.body;
 //   try {
@@ -1331,35 +1632,19 @@ const AbandonedCart = async (req, res) => {
     return res.status(500).json({ message: "Error fetching abandoned cart items" });
   }
 };
-
-
+ 
 const AdminLogin = async (req, res) => {
-  const { email, password } = req.body;
-
-  // console.log("Admin login attempt:", email, password);
-
-  try {
-    // const existingAdmin = await Admin.findOne({ email: "admin@example.com" });
-
-    // if (!existingAdmin) {
-    //   const hashedPassword = await bcrypt.hash("Admin@123", 10);
-    //   await Admin.create({
-    //     email: "admin@example.com",
-    //     password: hashedPassword,
-    //   });
-    //   console.log("✅ Admin created successfully!");
-    // }
-    // Hardcoded admin credentials
-    const ADMIN_EMAIL = "admin@example.com";
-    const ADMIN_PASSWORD = "Admin@123";
+  const { email, password } = req.body; 
+  try { 
+    const ADMIN_EMAIL = "admin@gmail.com";
+    const ADMIN_PASSWORD = "admin@123";
 
     if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-
-    // Generating jwt JWT token
+ 
     const token = jwt.sign({ role: "admin", email }, "your_secret_key", {
-      expiresIn: "7d", // Token valid for 7 days
+      expiresIn: "7d", 
     });
 
     return res.status(200).json({ message: "Login successful", token, email });
@@ -1428,6 +1713,10 @@ module.exports = {
   addOrUpdateProductInCategory,
   updateOccasionStock,
   updateCategoryStock,
+  getProductsWithStock,
+  getProductStock,
+  updateStock,
+  getStockHistory,
   AbandonedCart,
   getCategoryProducts,
   getOccCategoryProducts,

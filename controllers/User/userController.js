@@ -29,6 +29,63 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// const reqOTP = async (req, res) => {
+//   const { phoneNumber } = req.body;
+//   if (!phoneNumber) return res.status(400).json({ error: "Phone number is required" });
+
+//   try {
+//     let user = await User.findOne({ phoneNumber });
+
+//     // If user doesn't exist, create a new one
+//     if (!user) {
+//       user = new User({ phoneNumber });
+//     }
+
+//     // Assign hardcoded OTP
+//     user.otp = HARD_CODED_OTP;
+//     user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // Valid for 5 minutes
+//     await user.save();
+
+//     res.status(200).json({ message: `OTP sent successfully`, otp: HARD_CODED_OTP }); // OTP visible for testing
+//   } catch (error) {
+//     console.error("Error in OTP request:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// } 
+ 
+// const verifyOTP =  async (req, res) => {
+//   const { phoneNumber, otp } = req.body;
+//   if (!phoneNumber || !otp) return res.status(400).json({ error: "Phone number and OTP are required" });
+
+//   try {
+//     const user = await User.findOne({ phoneNumber });
+//     if (!user) return res.status(400).json({ error: "User not found" });
+
+//     // Check if OTP is correct
+//     if (otp !== HARD_CODED_OTP) {
+//       return res.status(400).json({ error: "Invalid OTP" });
+//     }
+
+//     // Generate JWT Token
+//     const token = jwt.sign({ userId: user._id, phoneNumber }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+//     // Clear OTP after successful login
+//     user.otp = '1234';
+//     user.email = undefined,
+//     user.otpExpires = Date.now();
+//     await user.save();
+
+//     res.status(200).json({ message: "Login successful", token, user });
+//   } catch (error) {
+//     console.error("Error in OTP verification:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// }
+
+const generateOTP = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString(); // Generates 4-digit OTP
+};
+
 const reqOTP = async (req, res) => {
   const { phoneNumber } = req.body;
   if (!phoneNumber) return res.status(400).json({ error: "Phone number is required" });
@@ -36,51 +93,71 @@ const reqOTP = async (req, res) => {
   try {
     let user = await User.findOne({ phoneNumber });
 
-    // If user doesn't exist, create a new one
     if (!user) {
       user = new User({ phoneNumber });
     }
 
-    // Assign hardcoded OTP
-    user.otp = HARD_CODED_OTP;
-    user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // Valid for 5 minutes
+    const otp = generateOTP();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    
+    // In production, you would send this OTP via SMS service like Twilio
+    console.log(`OTP for ${phoneNumber}: ${otp}`); // Remove in production
+    
     await user.save();
 
-    res.status(200).json({ message: `OTP sent successfully`, otp: HARD_CODED_OTP }); // OTP visible for testing
+    res.status(200).json({ 
+      message: "OTP sent successfully", 
+      otp: otp // Remove this in production, only for testing
+    });
   } catch (error) {
     console.error("Error in OTP request:", error);
     res.status(500).json({ error: "Server error" });
   }
-} 
- 
-const verifyOTP =  async (req, res) => {
+};
+
+const verifyOTP = async (req, res) => {
   const { phoneNumber, otp } = req.body;
-  if (!phoneNumber || !otp) return res.status(400).json({ error: "Phone number and OTP are required" });
+  if (!phoneNumber || !otp) {
+    return res.status(400).json({ error: "Phone number and OTP are required" });
+  }
 
   try {
-    const user = await User.findOne({ phoneNumber });
-    if (!user) return res.status(400).json({ error: "User not found" });
+    const user = await User.findOne({ 
+      phoneNumber,
+      otpExpires: { $gt: Date.now() } // Check if OTP is not expired
+    });
 
-    // Check if OTP is correct
-    if (otp !== HARD_CODED_OTP) {
+    if (!user) {
+      return res.status(400).json({ error: "Invalid OTP or OTP expired" });
+    }
+
+    if (user.otp !== otp) {
       return res.status(400).json({ error: "Invalid OTP" });
     }
 
-    // Generate JWT Token
-    const token = jwt.sign({ userId: user._id, phoneNumber }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // Generate JWT Token (valid for 7 days)
+    const token = jwt.sign(
+      { userId: user._id, phoneNumber }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "7d" }
+    );
 
-    // Clear OTP after successful login
-    user.otp = '1234';
-    user.email = undefined,
-    user.otpExpires = Date.now();
+    // Instead of setting to undefined, set to empty/null values
+    user.otp = null;
+    user.otpExpires = null;
     await user.save();
 
-    res.status(200).json({ message: "Login successful", token, user });
+    res.status(200).json({ 
+      message: "Login successful", 
+      token,
+      user 
+    });
   } catch (error) {
     console.error("Error in OTP verification:", error);
     res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 const updateUser = async (req, res) => {
   try { 

@@ -123,32 +123,75 @@ const ProductCategory = new mongoose.Schema({
   },
 });
 
+// const CategoryProduct = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   mrp: { type: Number, required: true },
+//   discount: { type: Number, default: 0 },
+//   offerPrice: { type: Number },
+//   category: { type: String, required: true },
+//   sizeChart: { type: String},
+//   images: { type: [String], required: true }, 
+//   tag: { type: String },
+//   color: { type: [String] },  
+//   fabric: { type: String },
+//   size: { type: [String] },   
+//   description: { type: String },
+//   additionalInfo: { type: String },
+//   stocks: { type: Number, required: true, default: 0 }, 
+//   Minstocks: { type: Number, required: true, default: 0 }, 
+//   status: { type: Boolean, default: false }, 
+//   productCategory: { type: mongoose.Schema.Types.ObjectId, ref: "ProductCategory" },  
+//   stockHistory: [
+//     {
+//       stockName: { type: String, required: true },
+//       addedStock: { type: Number, required: true },
+//       previousStock: { type: Number, required: true }, // Previous stock before addition
+//       addedAt: { type: Date, default: Date.now } // Timestamp for when stock was added
+//     }
+//   ]
+// });
+
+const stockBySizeSchema = new mongoose.Schema({
+  size: { type: String, required: true },
+  quantity: { type: Number, required: true, default: 0 },
+  minQuantity: { type: Number, required: true, default: 0 }
+});
+
+const stockHistorySchema = new mongoose.Schema({
+  size: { type: String, required: true },
+  stockName: { type: String, required: true },
+  addedStock: { type: Number, required: true },
+  previousStock: { type: Number, required: true },
+  addedAt: { type: Date, default: Date.now }
+});
+
 const CategoryProduct = new mongoose.Schema({
   name: { type: String, required: true },
   mrp: { type: Number, required: true },
   discount: { type: Number, default: 0 },
   offerPrice: { type: Number },
   category: { type: String, required: true },
-  sizeChart: { type: String},
-  images: { type: [String], required: true }, 
+  sizeChart: { type: String },
+  images: { type: [String], required: true },
   tag: { type: String },
-  color: { type: [String] },  
+  color: { type: [String] },
   fabric: { type: String },
-  size: { type: [String] },   
+  availableSizes: { type: [String] },
+  stockBySize: [stockBySizeSchema],
   description: { type: String },
   additionalInfo: { type: String },
-  stocks: { type: Number, required: true, default: 0 }, 
-  Minstocks: { type: Number, required: true, default: 0 }, 
-  status: { type: Boolean, default: false }, 
-  productCategory: { type: mongoose.Schema.Types.ObjectId, ref: "ProductCategory" },  
-  stockHistory: [
-    {
-      stockName: { type: String, required: true },
-      addedStock: { type: Number, required: true },
-      previousStock: { type: Number, required: true }, // Previous stock before addition
-      addedAt: { type: Date, default: Date.now } // Timestamp for when stock was added
-    }
-  ]
+  status: { type: Boolean, default: false },
+  productCategory: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "ProductCategory" 
+  },
+  stockHistory: [stockHistorySchema]
+});
+
+// Calculate offer price before saving
+CategoryProduct.pre('save', function(next) {
+  this.offerPrice = this.mrp - (this.mrp * (this.discount / 100));
+  next();
 });
 
 const ProductSize = new mongoose.Schema({
@@ -204,11 +247,11 @@ const userSchema = new mongoose.Schema({
   },
   otp: {
     type: String,
-    required: true,  
+    // required: true,  
   },
   otpExpires: {
     type: Date,
-    required: true, 
+    // required: true, 
   },
   firstName: {
     type: String,

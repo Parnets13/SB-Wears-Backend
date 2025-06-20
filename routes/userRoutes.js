@@ -37,7 +37,11 @@ const {
      deleteOccCategory,
      deleteProCategory,
      addOrUpdateProCategory,
-     getProCategoryById
+     getProCategoryById,
+     updateStock,
+     getProductStock,
+     getStockHistory,
+     getProductsWithStock
   }
    = require("../controllers/Admin/adminController"); 
 
@@ -102,6 +106,18 @@ router.delete("/category/product/:id", deleteProduct);
 
 router.post("/update/occasion/stock" , updateOccasionStock)
 router.post("/update/category/stock" , updateCategoryStock) 
+
+// New Get products with stock information
+router.get('/products/stock', getProductsWithStock);
+
+// Get specific product stock
+router.get('/products/:productId/stock', getProductStock);
+
+// Update stock
+router.post('/products/:productId/stock', updateStock);
+
+// Get stock history
+router.get('/products/:productId/stock-history', getStockHistory);
 
 router.post("/auth/request-otp" , reqOTP)
 router.post("/auth/verify-otp" , verifyOTP)
