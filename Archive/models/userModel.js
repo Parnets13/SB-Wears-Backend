@@ -1,6 +1,9 @@
 
 const mongoose = require("mongoose");
 
+// const userSchema = new mongoose.Schema({
+// });
+
 const bannerSchema = new mongoose.Schema({
   image: {
     type: String,
@@ -111,7 +114,7 @@ const ProductCategory = new mongoose.Schema({
   products: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "CategoryProduct",
+      ref: "CategoryProduct", // Reference to CategoryProduct model
     },
   ],
   createdAt: {
@@ -184,7 +187,8 @@ const CategoryProduct = new mongoose.Schema({
   },
   stockHistory: [stockHistorySchema]
 });
- 
+
+// Calculate offer price before saving
 CategoryProduct.pre('save', function(next) {
   this.offerPrice = this.mrp - (this.mrp * (this.discount / 100));
   next();
@@ -233,7 +237,7 @@ const ProductTag = new mongoose.Schema({
     default: Date.now,
   }, 
 });
-
+  
 const userSchema = new mongoose.Schema({
   phoneNumber: {
     type: String,
@@ -275,13 +279,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
- 
+
+  // Cart schema for storing both occasion and category products
   cart: [
     {
       productId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'CategoryProduct',
+        refPath: 'CategoryProduct',  // Dynamically reference either OccasionProduct or CategoryProduct
       },
     
       quantity: {
@@ -455,18 +460,8 @@ const orderSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+// console.log("Registered Models:", mongoose.modelNames());
 
-const contactUsSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    message: { type: String, required: true },
-  },
-  { timestamps: true }
-);
-
-const ContactUs = mongoose.model("ContactUs", contactUsSchema);
 const User = mongoose.model("User", userSchema);
 const Order = mongoose.model("Order", orderSchema);
 const Banner = mongoose.model('Banner', bannerSchema);
@@ -481,12 +476,11 @@ const ProFabric = mongoose.model('ProductFabric', ProductFabric);
 const ProTag = mongoose.model('ProductTag', ProductTag); 
 
 module.exports = {
-
   User , Order , Banner , 
   Title , OccasionCategory , 
   ProCategory , ProSize , 
   ProColor , ProFabric , 
   ProTag, OccProduct ,
-  categoryProduct , ContactUs,
+  categoryProduct , 
 }
  

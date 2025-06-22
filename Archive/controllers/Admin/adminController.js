@@ -18,59 +18,21 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
 
-// const getUser = async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const user = await User.findById(id)
-//       .populate("cart.productId")
-//       .populate("wishlist.productId")
-//       .populate("recentlyViewed.productId"); 
-
-//     if (!user) {
-//       return res.status(404).json({ message: "User Not Found" });
-//     }
-
-//     return res.status(200).json(user);
-//   } catch (error) {
-//     console.error("Error fetching user:", error);
-//     return res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
 const getUser = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const user = await User.findById(id)
-      // .populate("cart.productId") 
-        .populate({
-        path: 'cart.productId',
-        // populate: { path: 'productId' }, // optional for nested schemas
-      })
-      .exec();
+      .populate("cart.productId")
+      .populate("wishlist.productId")
+      .populate("recentlyViewed.productId");
+      
 
     if (!user) {
       return res.status(404).json({ message: "User Not Found" });
     }
 
-    // Format date for frontend if needed
-    let formattedDob = null;
-    if (user.dob) {
-      const dobDate = new Date(user.dob);
-      formattedDob = {
-        day: dobDate.getDate(),
-        month: dobDate.getMonth() + 1, // Months are 0-indexed
-        year: dobDate.getFullYear()
-      };
-    }
-
-    const userData = {
-      ...user.toObject(),
-      dob: formattedDob
-    };
-
-    return res.status(200).json(userData);
+    return res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
     return res.status(500).json({ message: "Internal Server Error" });

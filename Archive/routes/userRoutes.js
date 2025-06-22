@@ -9,9 +9,7 @@ const {
     AddToCart,
     RemoveFromCart,
     deleteProduct,
-    getProductByID,
-    createContact,
-    getAllContacts
+    getProductByID
   } = require("../controllers/User/userController"); 
 
 const { 
@@ -144,10 +142,6 @@ router.post("/details", AdminDetails)
 
 router.get("/category/:categoryId" , getCategoryProducts)
 router.get("/occasion/category/:categoryId" , getOccCategoryProducts)
-
-//contactus
-router.post("/contactus" , createContact)
-router.get("/contactus" , getAllContacts)
 
 
 module.exports = router; 

@@ -3,8 +3,7 @@ const
   Title ,  
   OccProduct,
   categoryProduct,
-  User,OccasionCategory,
-  ContactUs,  
+  User,OccasionCategory,  
 
 } = require("../../models/userModel");   
 
@@ -161,73 +160,19 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-// const updateUser = async (req, res) => {
-//   try { 
-//       const {userId} = req.query; 
-//       const {updatedData} = req.body;   
-
-//       const updatedUser = await User.findByIdAndUpdate(userId, updatedData, { new: true });
-
-//       return res.status(200).json({ message: "User details updated", user: updatedUser });
-//   } catch (error) {
-//       return res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// }
-
 const updateUser = async (req, res) => {
   try { 
-    const { userId } = req.body;
-    const updatedData = req.body;
+      const {userId} = req.query; 
+      const {updatedData} = req.body;  
+      // console.log(userId , updatedData)
 
-    // Validate user ID
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
-    }
+      const updatedUser = await User.findByIdAndUpdate(userId, updatedData, { new: true });
 
-    // Partial update logic
-    const updateObject = {};
-    
-    // Basic info
-    if (updatedData.firstName) updateObject.firstName = updatedData.firstName;
-    if (updatedData.lastName) updateObject.lastName = updatedData.lastName;
-    if (updatedData.email) updateObject.email = updatedData.email;
-    if (updatedData.dob) {
-      // Convert separate day/month/year to Date object
-      if (updatedData.dob.day && updatedData.dob.month && updatedData.dob.year) {
-        updateObject.dob = new Date(
-          `${updatedData.dob.year}-${updatedData.dob.month}-${updatedData.dob.day}`
-        );
-      }
-    }
-    if (updatedData.gender) updateObject.gender = updatedData.gender;
-
-    // Shipping address
-    if (updatedData.shippingDetails) {
-      updateObject.shippingDetails = updatedData.shippingDetails;
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateObject },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({ 
-      message: "User details updated successfully", 
-      user: updatedUser 
-    });
+      return res.status(200).json({ message: "User details updated", user: updatedUser });
   } catch (error) {
-    console.error("Error updating user:", error);
-    return res.status(500).json({ 
-      message: "Error updating user details", 
-      error: error.message 
-    });
+      return res.status(500).json({ message: "Server error", error: error.message });
   }
-};
+}
 
 const AdminDetails = async (req, res) => {
   try {
@@ -386,31 +331,28 @@ const getOccasionWithCategoriesAndProducts = async (req, res) => {
     res.status(500).json({ message: "Error fetching data", error: error.message });
   }
 };
-
-const AddToCart = async (req, res) => {
-  const { userId, productId, size, quantity = 1 } = req.body;
-
+ 
+const AddToCart = async (req , res)=> {
+  const {userId, productId, size , quantity = 1} = req.body
+  // console.log(userId, productId, size , productType)
   try {
     const user = await User.findById(userId);
-    const product = await categoryProduct.findById(productId); // Validate size
 
-    if (!user || !product) {
-      return res.status(404).json({ error: "User or Product not found" });
+    if (!user) {
+      throw new Error("User not found");
     }
 
-    if (!product.availableSizes.includes(size)) {
-      return res.status(400).json({ error: "Selected size not available" });
-    }
-
+    // Check if product already exists in the cart
     const existingProduct = user.cart.find(
-      (item) =>
-        item.productId.toString() === productId.toString() &&
-        item.size === size
+      (item) => item.productId.toString() === productId.toString() 
+      && item.size === size
     );
 
     if (existingProduct) {
+      // If product exists, update quantity
       existingProduct.quantity += quantity;
     } else {
+      // If product does not exist, add it to the cart
       user.cart.push({
         productId,
         size,
@@ -420,15 +362,15 @@ const AddToCart = async (req, res) => {
     }
 
     await user.save();
-    return res.status(200).json(user.cart);
+    return res.status(200).json(user.cart); // Return updated cart
   } catch (error) {
-    console.error("Add to cart error:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    console.error( error.message);
+    // throw new Error("Error adding product to cart");
   }
-};
-
+}
+  
 const RemoveFromCart = async (req, res) => {
-  const { userId, productId, size, removeAll = false } = req.body;
+  const { userId, productId, productType, size, removeAll = false } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -437,54 +379,41 @@ const RemoveFromCart = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Find the product in the cart
     const existingProductIndex = user.cart.findIndex(
       (item) =>
         item.productId.toString() === productId.toString() &&
-        item.size === size
+        item.productType === productType && item.size === size
     );
 
     if (existingProductIndex === -1) {
       return res.status(404).json({ error: "Product not found in cart" });
     }
-
-    if (removeAll || user.cart[existingProductIndex].quantity === 1) {
+ 
+    if (removeAll) {
+      // Remove the entire product from the cart
       user.cart.splice(existingProductIndex, 1);
     } else {
-      user.cart[existingProductIndex].quantity -= 1;
+      // Reduce the quantity by 1
+      if (user.cart[existingProductIndex].quantity > 1) {
+        user.cart[existingProductIndex].quantity -= 1;
+      } else {
+        // If quantity becomes 0, remove the product
+        user.cart.splice(existingProductIndex, 1);
+      }
     }
 
     await user.save();
-    return res.status(200).json(user.cart);
+    return res.status(200).json(user.cart); // Return updated cart
   } catch (error) {
     console.error("Error removing from cart:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-};
- 
-const createContact = async (req, res) => {
-  try {
-    const contact = new ContactUs(req.body);
-    await contact.save();
-    res.status(201).json({ message: "Contact message submitted successfully." });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to submit message." });
-  }
-};
-
-// GET /api/contactus (Admin only)
-const getAllContacts = async (req, res) => {
-  try {
-    const contacts = await ContactUs.find().sort({ createdAt: -1 });
-    res.status(200).json(contacts);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch messages." });
+    return res.status(500).json({ error: "Error removing product from cart" });
   }
 };
 
 
 module.exports = 
 { 
-  createContact,getAllContacts,
   reqOTP , verifyOTP, updateUser, AdminDetails,
   getAllProductsFromAllOccasionCategories,
   getOccasionWithCategoriesAndProducts , 
